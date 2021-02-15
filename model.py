@@ -77,7 +77,7 @@ class NMTmodel(torch.nn.Module):
         tokens.insert(0, self.word2ind_en["<S>"])
         tokens.append(self.word2ind_en["</S>"])
 
-        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device)
+        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(self.device)
 
         with torch.no_grad():
             enc_res, (h, c) = self.encoder(sentence_tensor)
