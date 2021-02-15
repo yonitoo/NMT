@@ -84,7 +84,7 @@ class NMTmodel(torch.nn.Module):
         outputs = [self.word2ind_bg[startToken]]
 
         for _ in range(limit):
-            previous_word = torch.LongTensor([outputs[-1]]).to(device)
+            previous_word = torch.LongTensor([outputs[-1]]).to(self.device)
 
             with torch.no_grad():
                 output, h, c = self.decoder(previous_word, enc_res, h, c)
