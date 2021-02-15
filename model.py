@@ -80,7 +80,7 @@ class NMTmodel(torch.nn.Module):
         sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device)
 
         with torch.no_grad():
-            enc_res, (h, c) = self.encoder(sentence_tensor, sentence_tensor.size())
+            enc_res, (h, c) = self.encoder(sentence_tensor.unsqueeze(1).to(device))
         outputs = [self.word2ind_bg[startToken]]
 
         for _ in range(limit):
