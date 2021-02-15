@@ -50,7 +50,7 @@ class NMTmodel(torch.nn.Module):
         X1_E = self.embed_en(X1)
         X2 = self.preparePaddedBatch(target, self.word2ind_bg, self.unkTokenBGIdx, self.padTokenBGIdx)
         X2_E = self.embed_bg(X2[:-1])
-        source_lengths = [len(s) - 1 for s in source]
+        source_lengths = [len(s) for s in source]
         outputPackedSource, (hidden_source, _) = self.encoder(torch.nn.utils.rnn.pack_padded_sequence(X1_E, source_lengths, enforce_sorted=False))
         outputSource, _ = torch.nn.utils.rnn.pad_packed_sequence(outputPackedSource)
         outputSource = outputSource.flatten(0, 1)
