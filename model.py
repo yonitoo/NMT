@@ -47,7 +47,7 @@ class NMTmodel(torch.nn.Module):
     
     def forward(self, source, target):
         X1 = self.preparePaddedBatch(source, self.word2ind_en, self.unkTokenENIdx, self.padTokenENIdx)
-        X1_E = self.embed_en(X1[:-1])
+        X1_E = self.embed_en(X1)
         X2 = self.preparePaddedBatch(target, self.word2ind_bg, self.unkTokenBGIdx, self.padTokenBGIdx)
         X2_E = self.embed_bg(X2[:-1])
         source_lengths = [len(s) - 1 for s in source]
