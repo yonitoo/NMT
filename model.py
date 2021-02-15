@@ -46,9 +46,9 @@ class NMTmodel(torch.nn.Module):
         self.projection = torch.nn.Linear(hidden_size, len(word2ind_bg))
     
     def forward(self, source, target):
-        X1 = self.preparePaddedBatch(source, self.word2ind_bg, self.unkTokenBGIdx, self.padTokenBGIdx)
-        X1_E = self.embed_bg(X1[:-1])
-        X2 = self.preparePaddedBatch(source, self.word2ind_en, self.unkTokenENIdx, self.padTokenENIdx)
+        X1 = self.preparePaddedBatch(source, self.word2ind_en, self.unkTokenENIdx, self.padTokenENIdx)
+        X1_E = self.embed_en(X1[:-1])
+        X2 = self.preparePaddedBatch(target, self.word2ind_bg, self.unkTokenBGIdx, self.padTokenBGIdx)
         X2_E = self.embed_bg(X2[:-1])
         source_lengths = [len(s) - 1 for s in source]
         outputPackedSource, (hidden_source, _) = self.encoder(torch.nn.utils.rnn.pack_padded_sequence(X1_E, source_lengths, enforce_sorted=False))
@@ -62,6 +62,8 @@ class NMTmodel(torch.nn.Module):
         
         Z1 = self.projection(self.dropout(outputTarget.flatten(0,1)))
         Y1_bar = X2[1:].flatten(0,1)
+        print(Z1.shape)
+        print(Y1_bar.shape)
         H = torch.nn.functional.cross_entropy(Z1, Y1_bar, ignore_index=self.padTokenBGIdx)
         return H
 
@@ -77,7 +79,7 @@ class NMTmodel(torch.nn.Module):
         tokens.insert(0, self.word2ind_en["<S>"])
         tokens.append(self.word2ind_en["</S>"])
 
-        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(self.device)
+        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device)
 
         with torch.no_grad():
             enc_res, (h, c) = self.encoder(sentence_tensor)
@@ -92,7 +94,6 @@ class NMTmodel(torch.nn.Module):
 
             outputs.append(best_guess)
 
-            # Model predicts it's the end of the sentence
             if output.argmax(1).item() == self.word2ind_en["</S>"]:
                 break
         revBulgarian ={v:k for k, v in self.word2ind_bg.items()}
