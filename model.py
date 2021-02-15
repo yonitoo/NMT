@@ -67,7 +67,7 @@ class NMTmodel(torch.nn.Module):
 
     def translateSentence(self, sentence, limit=1000):
 
-        device = next(self.parameters()).device
+        #device = next(self.parameters()).device
         def getWordFromIdx(dictionary, idx):
             if idx in dictionary.keys():
                 return dictionary[idx]
@@ -77,12 +77,10 @@ class NMTmodel(torch.nn.Module):
         tokens.insert(0, self.word2ind_en["<S>"])
         tokens.append(self.word2ind_en["</S>"])
 
-        # Convert to Tensor
-        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device)
+        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(self.device)
 
         with torch.no_grad():
             enc_res, (h, c) = self.encoder(sentence_tensor)
-        startToken = '<S>'
         outputs = [self.word2ind_bg[startToken]]
 
         for _ in range(limit):
