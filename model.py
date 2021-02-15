@@ -62,8 +62,6 @@ class NMTmodel(torch.nn.Module):
         
         Z1 = self.projection(self.dropout(outputTarget.flatten(0,1)))
         Y1_bar = X2[1:].flatten(0,1)
-        print(Z1.shape)
-        print(Y1_bar.shape)
         H = torch.nn.functional.cross_entropy(Z1, Y1_bar, ignore_index=self.padTokenBGIdx)
         return H
 
