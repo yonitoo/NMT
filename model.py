@@ -12,11 +12,10 @@ import torch
 
 class NMTmodel(torch.nn.Module):
     def preparePaddedBatch(self, source, word2ind, unkTokenIdx, padTokenIdx):
-        device = next(self.parameters()).device
         m = max(len(s) for s in source)
         sents = [[word2ind.get(w, unkTokenIdx) for w in s] for s in source]
         sents_padded = [ s+(m-len(s))*[padTokenIdx] for s in sents]
-        return torch.t(torch.tensor(sents_padded, dtype=torch.long, device=device))
+        return torch.t(torch.tensor(sents_padded, dtype=torch.long, device=self.device))
     
     def save(self,fileName):
         torch.save(self.state_dict(), fileName)
@@ -25,7 +24,7 @@ class NMTmodel(torch.nn.Module):
         self.load_state_dict(torch.load(fileName))
     
     def __init__(self, embed_size, hidden_size, word2ind_bg, word2ind_en, startToken, unkToken, padToken, 
-                endToken, encoder_layers, decoder_layers, dropout):
+                endToken, encoder_layers, decoder_layers, dropout, device):
         super(NMTmodel, self).__init__()
         self.embed_size = embed_size
         self.hidden_size = hidden_size
@@ -39,6 +38,7 @@ class NMTmodel(torch.nn.Module):
         self.unkTokenENIdx = word2ind_en[unkToken]
         self.padTokenENIdx = word2ind_en[padToken]
         self.endTokenENIdx = word2ind_en[endToken]
+        self.device = device
 
         self.embed_bg = torch.nn.Embedding(len(word2ind_bg), embed_size)
         self.embed_en = torch.nn.Embedding(len(word2ind_en), embed_size)
@@ -95,7 +95,7 @@ class NMTmodel(torch.nn.Module):
         X_E = self.embed_en(X)
         outputSource, (hidden_source, state_source) = self.encoder(X_E)
         result = []
-        inputSource = torch.tensor([[self.startTokenBGIdx]], device = next(self.parameters()).device)
+        inputSource = torch.tensor([[self.startTokenBGIdx]], device = self.device)
         hidden_target = hidden_source
         state_target = state_source
         for _ in range(limit):
@@ -117,6 +117,6 @@ class NMTmodel(torch.nn.Module):
                 break
             else:
                 result.append(ind2word[currentWordIdx])
-                inputSource = torch.tensor([[currentWordIdx]], device = next(self.parameters()).device)
+                inputSource = torch.tensor([[currentWordIdx]], device = self.device)
 
         return result

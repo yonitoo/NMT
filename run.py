@@ -50,7 +50,7 @@ if len(sys.argv)>1 and (sys.argv[1] == 'train' or sys.argv[1] == 'extratrain'):
     (sourceWord2ind,targetWord2ind) = pickle.load(open(wordsDataFileName, 'rb'))
 
     nmt = model.NMTmodel(embed_size, hidden_size, sourceWord2ind, targetWord2ind, startToken, unkToken, 
-                padToken, endToken, encoder_layers, decoder_layers, dropout).to(device)
+                padToken, endToken, encoder_layers, decoder_layers, dropout, device).to(device)
     optimizer = torch.optim.Adam(nmt.parameters(), lr=learning_rate)
 
     if sys.argv[1] == 'extratrain':
@@ -135,7 +135,7 @@ if len(sys.argv)>3 and sys.argv[1] == 'perplexity':
     (sourceWord2ind,targetWord2ind) = pickle.load(open(wordsDataFileName, 'rb'))
     
     nmt = model.NMTmodel(embed_size, hidden_size, sourceWord2ind, targetWord2ind, startToken, unkToken, padToken, endToken, 
-                encoder_layers, decoder_layers, dropout).to(device)
+                encoder_layers, decoder_layers, dropout, device).to(device)
     nmt.load(modelFileName)
     
     sourceTest = utils.readCorpus(sys.argv[2])
@@ -151,7 +151,7 @@ if len(sys.argv)>3 and sys.argv[1] == 'translate':
     sourceTest = utils.readCorpus(sys.argv[2])
 
     nmt = model.NMTmodel(embed_size, hidden_size, sourceWord2ind, targetWord2ind, startToken, unkToken, padToken, endToken, 
-                encoder_layers, decoder_layers, dropout).to(device)
+                encoder_layers, decoder_layers, dropout, device).to(device)
     nmt.load(modelFileName)
 
     nmt.eval()
