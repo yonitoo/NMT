@@ -134,7 +134,7 @@ if len(sys.argv)>1 and (sys.argv[1] == 'train' or sys.argv[1] == 'extratrain'):
 if len(sys.argv)>3 and sys.argv[1] == 'perplexity':
     (sourceWord2ind,targetWord2ind) = pickle.load(open(wordsDataFileName, 'rb'))
     
-    nmt = model.NMTmodel(embed_size, hidden_size, sourceWord2ind, targetWord2ind, unkToken, padToken, endToken, 
+    nmt = model.NMTmodel(embed_size, hidden_size, sourceWord2ind, targetWord2ind, startToken, unkToken, padToken, endToken, 
                 encoder_layers, decoder_layers, dropout).to(device)
     nmt.load(modelFileName)
     

@@ -9,18 +9,13 @@ corpusDataFileName = 'corpusData'
 wordsDataFileName = 'wordsData'
 modelFileName = 'NMTmodel'
 
-#device = torch.device("cuda:0")
-device = torch.device("cpu")
-
-startToken = '<S>'
-endToken = '</S>'
-unkToken = '<UNK>'
-padToken = '<PAD>'
+device = torch.device("cuda:0")
+#device = torch.device("cpu")
 
 embed_size = 64
 hidden_size = 512
-encoder_layers = 1
-decoder_layers = 1
+encoder_layers = 2
+decoder_layers = 2
 dropout = 0.4
 
 uniform_init = 0.1

@@ -24,16 +24,18 @@ class NMTmodel(torch.nn.Module):
     def load(self,fileName):
         self.load_state_dict(torch.load(fileName))
     
-    def __init__(self, embed_size, hidden_size, word2ind_bg, word2ind_en, unkToken, padToken, endToken, 
+    def __init__(self, embed_size, hidden_size, word2ind_bg, word2ind_en, startToken, unkToken, padToken, endToken, 
                 encoder_layers, decoder_layers, dropout):
         super(NMTmodel, self).__init__()
         self.embed_size = embed_size
         self.hidden_size = hidden_size
         self.word2ind_bg = word2ind_bg
+        self.startTokenBGIdx = word2ind_bg[startToken]
         self.unkTokenBGIdx = word2ind_bg[unkToken]
         self.padTokenBGIdx = word2ind_bg[padToken]
         self.endTokenBGIdx = word2ind_bg[endToken]
         self.word2ind_en = word2ind_en
+        self.startTokenENIdx = word2ind_en[startToken]
         self.unkTokenENIdx = word2ind_en[unkToken]
         self.padTokenENIdx = word2ind_en[padToken]
         self.endTokenENIdx = word2ind_en[endToken]
@@ -44,21 +46,38 @@ class NMTmodel(torch.nn.Module):
         self.decoder = torch.nn.LSTM(embed_size, hidden_size, num_layers = decoder_layers)
         self.dropout = torch.nn.Dropout(dropout)
         self.projection = torch.nn.Linear(hidden_size, len(word2ind_bg))
+        self.attention = torch.nn.Linear(hidden_size * 2, hidden_size)
     
     def forward(self, source, target):
         X1 = self.preparePaddedBatch(source, self.word2ind_en, self.unkTokenENIdx, self.padTokenENIdx)
         X1_E = self.embed_en(X1)
         X2 = self.preparePaddedBatch(target, self.word2ind_bg, self.unkTokenBGIdx, self.padTokenBGIdx)
         X2_E = self.embed_bg(X2[:-1])
+
+###Encoder
         source_lengths = [len(s) for s in source]
-        outputPackedSource, (hidden_source, _) = self.encoder(torch.nn.utils.rnn.pack_padded_sequence(X1_E, source_lengths, enforce_sorted=False))
+        outputPackedSource, (hidden_source, state_source) = self.encoder(torch.nn.utils.rnn.pack_padded_sequence(X1_E, source_lengths, enforce_sorted=False))
         outputSource, _ = torch.nn.utils.rnn.pad_packed_sequence(outputPackedSource)
         outputSource = outputSource.flatten(0, 1)
 
+###Decoder
         target_lengths = [len(t) - 1 for t in target]
         outputPackedTarget, (_, _) = self.decoder(torch.nn.utils.rnn.pack_padded_sequence(X2_E, target_lengths, enforce_sorted=False), 
-                                (hidden_source, torch.zeros(hidden_source.size()).to(next(self.parameters()).device)))
+                                (hidden_source, state_source))
         outputTarget, _ = torch.nn.utils.rnn.pad_packed_sequence(outputPackedTarget)
+
+###Attention
+        #outputSource -> l1,batch,hidSize
+        #outputTarget -> l2,batch,hidSize
+        #torch.bmm -> batch, l1, hidSize | batch, hidSize, l2 -> batch, l1, l2
+        #attentionWeights -> batch, l1, l2
+        #torch.bmm outputSource and attentionWeights -> batch, hidSize, l1 | batch, l1, l2 -> batch, hidSize, l2
+        #contextVector -> batch, hidSize, l2
+        #outputTarget -> l2, batch, 2 * hidSize 
+        attentionWeights = torch.nn.functional.softmax((torch.bmm(outputSource.permute(1, 0, 2), outputTarget.permute(1, 2, 0))), dim=1)
+        contextVector = torch.bmm(outputSource.permute(1, 2, 0), attentionWeights).permute(2, 0, 1)
+        outputTarget = self.attention(torch.cat((contextVector, outputTarget), dim=-1))
+        ###
         
         Z1 = self.projection(self.dropout(outputTarget.flatten(0,1)))
         Y1_bar = X2[1:].flatten(0,1)
@@ -67,46 +86,32 @@ class NMTmodel(torch.nn.Module):
 
     def translateSentence(self, sentence, limit=1000):
 
-        device = next(self.parameters()).device
-        def getWordFromIdx(dictionary, idx):
-            if idx in dictionary.keys():
-                return dictionary[idx]
-            return 2
+        ind2word = dict(enumerate(self.word2ind_bg))
 
-        tokens = [getWordFromIdx(self.word2ind_en, word) for word in sentence]
-        tokens.insert(0, self.word2ind_en[startToken])
-        tokens.append(self.endTokenENIdx)
-
-        sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device)
-
-        with torch.no_grad():
-            enc_res, (h, c) = self.encoder(sentence_tensor)
-        outputs = [self.word2ind_bg[startToken]]
-
+        X = self.preparePaddedBatch([sentence], self.word2ind_en, self.unkTokenENIdx, self.padTokenENIdx)
+        X_E = self.embed_en(X)
+        outputSource, (hidden_source, state_source) = self.encoder(X_E)
+        result = []
+        inputSource = torch.tensor([[self.startTokenBG]], device = next(self.parameters()).device)
+        hidden_target = hidden_source
+        state_target = state_source
         for _ in range(limit):
-            previous_word = torch.LongTensor([outputs[-1]]).to(device)
+            
+            outputTarget = self.embed_bg(inputSource)
 
-            with torch.no_grad():
-                output, h, c = self.decoder(previous_word, enc_res, h, c)
-                best_guess = output.argmax(1).item()
 
-            outputs.append(best_guess)
+            attentionWeights = torch.nn.functional.softmax((torch.bmm(outputSource.permute(1, 0, 2), outputTarget.permute(1, 2, 0))), dim=1)
+            contextVector = torch.bmm(outputSource.permute(1, 2, 0), attentionWeights).permute(2, 0, 1)
+            outputTarget = self.attention(torch.cat((contextVector, outputTarget), dim=-1))
 
-            if output.argmax(1).item() == self.endTokenENIdx:
+            Z = self.projection(self.dropout(outputTarget.flatten(0,1)))
+            _, topIdx = torch.topk(Z.data, 1)
+            currentWordIdx = topIdx[0].item()
+
+            if currentWordIdx == self.endTokenBGIdx:
                 break
-        revBulgarian ={v:k for k, v in self.word2ind_bg.items()}
-        translated_sentence = [revBulgarian[idx] for idx in outputs]
-        result = translated_sentence[1:]
+            else:
+                result.append(ind2word[currentWordIdx])
+                inputSource = torch.tensor([[self.startTokenBG]], device = next(self.parameters()).device)
 
-        return result[:-1]
-
-        #ind2word_bg = dict(enumerate(self.word2ind_bg))
-        #device = next(self.parameters()).device
-        #with torch.no_grad():
-        #X = self.preparePaddedBatch([[sentence[0]]], self.word2ind_en, self.unkTokenENIdx, self.padTokenENIdx)
-        #Y = self.embed_en(X)
-        #outputSource, (hidden_source, c_source) = self.encoder(Y)
-        #size = list(hidden_source.size())
-        #size[0] = limit
-        #outputSources = torch.zeros(size, device=device)
-        #outputSources[0] = outputSource.flatten(0, 1)
+        return result
