@@ -82,8 +82,8 @@ if len(sys.argv)>1 and (sys.argv[1] == 'train' or sys.argv[1] == 'extratrain'):
             st = sorted(list(zip(sourceBatch,targetBatch)),key=lambda e: len(e[0]), reverse=True)
             (sourceBatch,targetBatch) = tuple(zip(*st))
             targetWords += sum( len(s)-1 for s in targetBatch )
-            H = nmt(sourceBatch,targetBatch)
             optimizer.zero_grad()
+            H = nmt(sourceBatch, targetBatch)
             H.backward()
             grad_norm = torch.nn.utils.clip_grad_norm_(nmt.parameters(), clip_grad)
             optimizer.step()
@@ -159,7 +159,8 @@ if len(sys.argv)>3 and sys.argv[1] == 'translate':
     pb = utils.progressBar()
     pb.start(len(sourceTest))
     for s in sourceTest:
-        file.write(' '.join(nmt.translateSentence(s))+"\n")
+        print(' '.join(nmt.translateSentence(s))+"\n")
+        #file.write(' '.join(nmt.translateSentence(s))+"\n")
         pb.tick()
     pb.stop()
 
