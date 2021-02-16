@@ -95,7 +95,7 @@ class NMTmodel(torch.nn.Module):
         X_E = self.embed_en(X)
         outputSource, (hidden_source, state_source) = self.encoder(X_E)
         result = []
-        inputSource = torch.tensor([[self.startTokenBG]], device = next(self.parameters()).device)
+        inputSource = torch.tensor([[self.startTokenBGIdx]], device = next(self.parameters()).device)
         hidden_target = hidden_source
         state_target = state_source
         for _ in range(limit):
@@ -117,6 +117,6 @@ class NMTmodel(torch.nn.Module):
                 break
             else:
                 result.append(ind2word[currentWordIdx])
-                inputSource = torch.tensor([[self.startTokenBG]], device = next(self.parameters()).device)
+                inputSource = torch.tensor([[currentWordIdx]], device = next(self.parameters()).device)
 
         return result
