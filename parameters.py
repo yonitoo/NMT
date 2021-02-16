@@ -9,8 +9,8 @@ corpusDataFileName = 'corpusData'
 wordsDataFileName = 'wordsData'
 modelFileName = 'NMTmodel'
 
-device = torch.device("cuda:0")
-#device = torch.device("cpu")
+#device = torch.device("cuda:0")
+device = torch.device("cpu")
 
 embed_size = 32
 hidden_size = 512
