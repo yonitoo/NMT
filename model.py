@@ -54,20 +54,20 @@ class NMTmodel(torch.nn.Module):
         X2 = self.preparePaddedBatch(target, self.word2ind_bg, self.unkTokenBGIdx, self.padTokenBGIdx)
         X2_E = self.embed_bg(X2[:-1])
 
-###Encoder
+        ###Encoder
         source_lengths = [len(s) for s in source]
         outputPackedSource, (hidden_source, state_source) = self.encoder(
             torch.nn.utils.rnn.pack_padded_sequence(X1_E, source_lengths, enforce_sorted=False))
         outputSource, _ = torch.nn.utils.rnn.pad_packed_sequence(outputPackedSource)
-        outputSource = outputSource.flatten(0, 1)
+        #outputSource = outputSource.flatten(0, 1)
 
-###Decoder
+        ###Decoder
         target_lengths = [len(t) - 1 for t in target]
         outputPackedTarget, (_, _) = self.decoder(torch.nn.utils.rnn.pack_padded_sequence(X2_E, 
                                 target_lengths, enforce_sorted=False), (hidden_source, state_source))
         outputTarget, _ = torch.nn.utils.rnn.pad_packed_sequence(outputPackedTarget)
 
-###Attention
+        ###Attention
         #outputSource -> l1,batch,hidSize
         #outputTarget -> l2,batch,hidSize
         #torch.bmm -> batch, l1, hidSize | batch, hidSize, l2 -> batch, l1, l2
@@ -75,6 +75,7 @@ class NMTmodel(torch.nn.Module):
         #torch.bmm outputSource and attentionWeights -> batch, hidSize, l1 | batch, l1, l2 -> batch, hidSize, l2
         #contextVector -> batch, hidSize, l2
         #outputTarget -> l2, batch, 2 * hidSize 
+
         attentionWeights = torch.nn.functional.softmax((torch.bmm(outputSource.permute(1, 0, 2),
                                                                 outputTarget.permute(1, 2, 0))), dim = 1)
         contextVector = torch.bmm(outputSource.permute(1, 2, 0), attentionWeights).permute(2, 0, 1)
