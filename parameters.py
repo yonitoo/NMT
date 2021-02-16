@@ -9,8 +9,8 @@ corpusDataFileName = 'corpusData'
 wordsDataFileName = 'wordsData'
 modelFileName = 'NMTmodel'
 
-device = torch.device("cuda:0")
-#device = torch.device("cpu")
+#device = torch.device("cuda:0")
+device = torch.device("cpu")
 
 startToken = '<S>'
 endToken = '</S>'

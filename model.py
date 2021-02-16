@@ -56,7 +56,7 @@ class NMTmodel(torch.nn.Module):
         outputSource = outputSource.flatten(0, 1)
 
         target_lengths = [len(t) - 1 for t in target]
-        outputPackedTarget, (hidden_target, _) = self.decoder(torch.nn.utils.rnn.pack_padded_sequence(X2_E, target_lengths, enforce_sorted=False), 
+        outputPackedTarget, (_, _) = self.decoder(torch.nn.utils.rnn.pack_padded_sequence(X2_E, target_lengths, enforce_sorted=False), 
                                 (hidden_source, torch.zeros(hidden_source.size()).to(next(self.parameters()).device)))
         outputTarget, _ = torch.nn.utils.rnn.pad_packed_sequence(outputPackedTarget)
         
@@ -74,13 +74,13 @@ class NMTmodel(torch.nn.Module):
             return 2
 
         tokens = [getWordFromIdx(self.word2ind_en, word) for word in sentence]
-        tokens.insert(0, self.word2ind_en["<S>"])
-        tokens.append(self.word2ind_en["</S>"])
+        tokens.insert(0, self.word2ind_en[startToken])
+        tokens.append(self.endTokenENIdx)
 
         sentence_tensor = torch.LongTensor(tokens).unsqueeze(1).to(device)
 
         with torch.no_grad():
-            enc_res, (h, c) = self.encoder(sentence_tensor.unsqueeze(1).to(device))
+            enc_res, (h, c) = self.encoder(sentence_tensor)
         outputs = [self.word2ind_bg[startToken]]
 
         for _ in range(limit):
@@ -92,13 +92,13 @@ class NMTmodel(torch.nn.Module):
 
             outputs.append(best_guess)
 
-            if output.argmax(1).item() == self.word2ind_en["</S>"]:
+            if output.argmax(1).item() == self.endTokenENIdx:
                 break
         revBulgarian ={v:k for k, v in self.word2ind_bg.items()}
         translated_sentence = [revBulgarian[idx] for idx in outputs]
         result = translated_sentence[1:]
 
-        return result
+        return result[:-1]
 
         #ind2word_bg = dict(enumerate(self.word2ind_bg))
         #device = next(self.parameters()).device
