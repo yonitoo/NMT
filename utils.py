@@ -47,7 +47,6 @@ def getDictionary(corpus, startToken, endToken, unkToken, padToken, wordCountThr
             else: dictionary[w]=1
 
     words = [startToken, endToken, unkToken, padToken] + [w for w in sorted(dictionary) if dictionary[w] > wordCountThreshold]
-    words = set(words)
     return { w:i for i,w in enumerate(words)}
 
 
